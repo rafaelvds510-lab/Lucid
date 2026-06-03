@@ -2,6 +2,51 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// CHAVE usada para persistir a preferência "Manter-me conectado"
+export const KEEP_SIGNED_IN_KEY = 'lucid_keep_signed_in';
+
+/**
+ * Armazenamento híbrido: usa localStorage quando o usuário escolheu
+ * "Manter-me conectado", e sessionStorage caso contrário.
+ * Isso garante que a sessão expire naturalmente ao fechar o navegador
+ * para usuários que não optaram pela persistência.
+ */
+const customStorage =
+  typeof window !== 'undefined'
+    ? {
+        getItem: (key: string): string | null => {
+          try {
+            const keepSignedIn = localStorage.getItem(KEEP_SIGNED_IN_KEY) === 'true';
+            return keepSignedIn
+              ? localStorage.getItem(key)
+              : sessionStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        },
+        setItem: (key: string, value: string): void => {
+          try {
+            const keepSignedIn = localStorage.getItem(KEEP_SIGNED_IN_KEY) === 'true';
+            if (keepSignedIn) {
+              localStorage.setItem(key, value);
+            } else {
+              sessionStorage.setItem(key, value);
+            }
+          } catch {
+            // Silencioso em ambientes sem storage
+          }
+        },
+        removeItem: (key: string): void => {
+          try {
+            localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
+          } catch {
+            // Silencioso
+          }
+        },
+      }
+    : undefined;
+
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
@@ -20,10 +65,10 @@ function createSupabaseClient() {
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      storage: customStorage,
       persistSession: true,
       autoRefreshToken: true,
-    }
+    },
   });
 }
 

@@ -71,16 +71,31 @@ function AppLayout() {
           })}
         </nav>
 
-        <button
-          onClick={async () => {
-            await signOut();
-            navigate({ to: "/" });
-          }}
-          className="mt-4 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </button>
+        <div className="mt-4 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-card/30">
+          {/* Avatar com iniciais */}
+          <div className="h-7 w-7 rounded-full bg-gradient-primary shadow-glow flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-semibold text-primary-foreground uppercase">
+              {user.email?.charAt(0) ?? "U"}
+            </span>
+          </div>
+          {/* E-mail truncado */}
+          <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+            {user.email}
+          </span>
+          {/* Botão de logout discreto */}
+          <button
+            id="sidebar-logout-btn"
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/" });
+            }}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition"
+            title="Sair"
+            aria-label="Sair da conta"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 min-w-0 flex flex-col">

@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { CharacterAvatar } from "@/components/CharacterAvatar";
 import { generateSuggestions, generateStoryTitle } from "@/lib/ai.functions";
 import { cn } from "@/lib/utils";
+import type { UserPersona } from "@/components/CharacterDetailsDialog";
 
 export const Route = createFileRoute("/app/chat/$storyId")({
   component: ChatPage,
@@ -40,6 +41,7 @@ function ChatPage() {
   const [streamText, setStreamText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [userPersona, setUserPersona] = useState<UserPersona | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +57,14 @@ function ChatPage() {
         .single();
       if (!s) { toast.error("História não encontrada"); navigate({ to: "/app" }); return; }
       setStory({ title: s.title, is_favorite: s.is_favorite });
-      setCharacter(s.character as never);
+      const char = s.character as never as Character;
+      setCharacter(char);
+
+      // Carregar persona do sessionStorage
+      try {
+        const saved = sessionStorage.getItem(`lucid_persona_${char.id}`);
+        if (saved) setUserPersona(JSON.parse(saved) as UserPersona);
+      } catch {}
 
       const { data: m } = await supabase
         .from("messages")
@@ -115,7 +124,11 @@ function ChatPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ storyId, userMessage: trimmed }),
+        body: JSON.stringify({
+          storyId,
+          userMessage: trimmed,
+          ...(userPersona ? { userPersona } : {}),
+        }),
         signal: ctl.signal,
       });
 
@@ -310,7 +323,11 @@ function ChatPage() {
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ storyId, userMessage }),
+        body: JSON.stringify({
+          storyId,
+          userMessage,
+          ...(userPersona ? { userPersona } : {}),
+        }),
       });
       if (!resp.ok || !resp.body) {
         toast.error("Falha ao regenerar");
@@ -373,32 +390,39 @@ function ChatPage() {
 
   return (
     <div className="relative flex-1 flex flex-col h-screen md:h-auto md:min-h-screen">
-      {/* Immersive background — character avatar blurred */}
+      {/* Wallpaper imersivo — foto do personagem como papel de parede */}
       {character.avatar_url && (
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="pointer-events-none fixed inset-0 z-0">
           <img
             src={character.avatar_url}
             alt=""
             aria-hidden
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-25"
+            className="absolute inset-0 w-full h-full object-cover object-top"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background/95" />
+          {/* Overlay gradiente sutil para legibilidade — preserva a imagem */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/70" />
         </div>
+      )}
+      {/* Fundo sólido quando não há avatar */}
+      {!character.avatar_url && (
+        <div className="fixed inset-0 z-0 bg-background" />
       )}
 
       {/* Header */}
-      <header className="relative z-30 sticky top-0 backdrop-blur bg-background/70 border-b border-border px-4 py-3 flex items-center gap-3">
-        <Link to="/app" className="p-2 -ml-2 rounded-full hover:bg-secondary"><ArrowLeft className="h-4 w-4" /></Link>
+      <header className="relative z-30 sticky top-0 backdrop-blur-md bg-black/50 border-b border-white/10 px-4 py-3 flex items-center gap-3">
+        <Link to="/app" className="p-2 -ml-2 rounded-full hover:bg-white/10 text-white">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <CharacterAvatar name={character.name} url={character.avatar_url} size="sm" />
         <div className="flex-1 min-w-0">
-          <div className="font-display text-lg font-semibold truncate">{character.name}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{story?.title}</div>
+          <div className="font-display text-lg font-semibold truncate text-white">{character.name}</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/60 truncate">{story?.title}</div>
         </div>
-        <button onClick={toggleFav} className="p-2 rounded-full hover:bg-secondary">
-          <Heart className={cn("h-4 w-4", story?.is_favorite ? "fill-primary text-primary" : "text-muted-foreground")} />
+        <button onClick={toggleFav} className="p-2 rounded-full hover:bg-white/10">
+          <Heart className={cn("h-4 w-4", story?.is_favorite ? "fill-primary text-primary" : "text-white/70")} />
         </button>
-        <button onClick={deleteStory} className="p-2 rounded-full hover:bg-destructive/20">
-          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+        <button onClick={deleteStory} className="p-2 rounded-full hover:bg-red-500/20">
+          <Trash2 className="h-4 w-4 text-white/60 hover:text-red-400" />
         </button>
       </header>
 
@@ -424,10 +448,10 @@ function ChatPage() {
                   )}
                   <div
                     className={cn(
-                      "rounded-2xl px-4 py-2.5 max-w-[85%] text-[15px] leading-relaxed prose prose-invert prose-p:my-1 relative",
+                      "rounded-2xl px-4 py-2.5 max-w-[85%] text-[15px] leading-relaxed prose prose-invert prose-p:my-1 relative backdrop-blur-sm",
                       m.role === "user"
-                        ? "bg-bubble-user text-bubble-user-foreground rounded-br-sm"
-                        : "bg-bubble-character text-bubble-character-foreground rounded-bl-sm",
+                        ? "bg-primary/80 text-primary-foreground rounded-br-sm shadow-lg"
+                        : "bg-black/50 text-white rounded-bl-sm shadow-lg border border-white/10",
                     )}
                   >
                     {isEditing ? (
@@ -494,8 +518,8 @@ function ChatPage() {
           {messages.length === 0 && !sending && (
             <div className="text-center py-12">
               <Sparkles className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Comece a conversa. Use *ações em negrito* para descrever o que você faz.
+              <p className="text-sm text-white/70">
+                Comece a conversa. Use *ações em itálico* para descrever o que você faz.
               </p>
             </div>
           )}
@@ -511,7 +535,7 @@ function ChatPage() {
             {suggestions.map((s, i) => (
               <button
                 key={i} onClick={() => send(s)}
-                className="shrink-0 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary transition"
+                className="shrink-0 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur border border-white/20 text-xs text-white/80 hover:text-white hover:border-primary transition"
               >
                 {s}
               </button>
@@ -521,13 +545,13 @@ function ChatPage() {
       )}
 
       {/* Composer */}
-      <div className="relative z-20 sticky bottom-0 backdrop-blur bg-background/80 border-t border-border px-4 py-3">
+      <div className="relative z-20 sticky bottom-0 backdrop-blur-md bg-black/50 border-t border-white/10 px-4 py-3">
         <div className="max-w-2xl mx-auto flex gap-2 items-end">
           <button
             onClick={regenerate}
             disabled={sending || messages.length < 2}
             title="Regenerar última resposta"
-            className="p-2.5 rounded-full border border-border hover:bg-card disabled:opacity-30"
+            className="p-2.5 rounded-full border border-white/20 bg-black/40 hover:bg-white/10 text-white/70 hover:text-white disabled:opacity-30"
           >
             <RefreshCcw className="h-4 w-4" />
           </button>
@@ -542,7 +566,7 @@ function ChatPage() {
             }}
             rows={1}
             placeholder="Escreva sua mensagem… (Shift+Enter para nova linha)"
-            className="flex-1 resize-none px-4 py-3 rounded-2xl bg-input border border-border focus:outline-none focus:ring-2 focus:ring-ring max-h-32 text-[15px]"
+            className="flex-1 resize-none px-4 py-3 rounded-2xl bg-black/40 backdrop-blur border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary max-h-32 text-[15px]"
             maxLength={4000}
           />
           <button
