@@ -47,18 +47,28 @@ const customStorage =
       }
     : undefined;
 
+// Credenciais públicas do Supabase (seguro expor no cliente)
+const SUPABASE_URL_DEFAULT = 'https://rjeszosetfxytazotoed.supabase.co';
+const SUPABASE_KEY_DEFAULT = 'sb_publishable_-NXMuKSJF4EOfWqvM5hwIg_5OFL689T';
+
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  // Prioridade: variável de build do Vite > process.env (SSR) > fallback hardcoded
+  const SUPABASE_URL =
+    import.meta.env.VITE_SUPABASE_URL ||
+    (typeof process !== 'undefined' ? process.env?.SUPABASE_URL : undefined) ||
+    SUPABASE_URL_DEFAULT;
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    (typeof process !== 'undefined' ? process.env?.SUPABASE_PUBLISHABLE_KEY : undefined) ||
+    SUPABASE_KEY_DEFAULT;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
