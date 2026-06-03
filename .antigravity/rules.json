@@ -1,0 +1,18 @@
+{
+  "workspace": {
+    "hooks": {
+      "pre-commit": "npm run test:dom",
+      "pre-push": "npm run test:dom"
+    },
+    "automation": {
+      "on_change": "validate-dom-changes"
+    },
+    "security_context": {
+      "permissions": [
+        "email",
+        "local_computer_access",
+        "storage"
+      ]
+    }
+  }
+}
