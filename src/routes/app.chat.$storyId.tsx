@@ -392,13 +392,15 @@ function ChatPage() {
     <div className="relative flex-1 flex flex-col h-screen md:h-auto md:min-h-screen">
       {/* Wallpaper imersivo — foto do personagem como papel de parede */}
       {character.avatar_url && (
-        <div className="pointer-events-none fixed inset-0 z-0">
-          <img
-            src={character.avatar_url}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-cover object-top"
-          />
+        <div
+          className="pointer-events-none fixed inset-0 z-0"
+          style={{
+            backgroundImage: `url(${character.avatar_url})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 20%",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
           {/* Overlay gradiente sutil para legibilidade — preserva a imagem */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/70" />
         </div>

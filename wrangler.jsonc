@@ -3,5 +3,12 @@
   "name": "tanstack-start-app",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "pages_build_output_dir": "dist"
+  "pages_build_output_dir": "dist",
+  "vars": {
+    "SUPABASE_URL": "https://rjeszosetfxytazotoed.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_-NXMuKSJF4EOfWqvM5hwIg_5OFL689T",
+    "VITE_SUPABASE_URL": "https://rjeszosetfxytazotoed.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_-NXMuKSJF4EOfWqvM5hwIg_5OFL689T",
+    "VITE_SUPABASE_PROJECT_ID": "rjeszosetfxytazotoed"
+  }
 }
